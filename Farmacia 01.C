@@ -33,11 +33,17 @@ void inserirRemedio(noRemedio *LISTA) {
     }
 
     printf("\nNome do Remedio: ");
-    scanf("%29s", novo->remedio);
+    getchar(); // Limpa o buffer
+    fgets(novo->remedio, 30, stdin);
+    novo->remedio[strcspn(novo->remedio, "\n")] = '\0'; // Remove o '\n'
+
     printf("Valor do Remedio: ");
     scanf("%f", &novo->valor); // Mudança para float
+
     printf("Fabricante do Remedio: ");
-    scanf("%29s", novo->fabricante);
+    getchar(); // Limpa o buffer
+    fgets(novo->fabricante, 30, stdin);
+    novo->fabricante[strcspn(novo->fabricante, "\n")] = '\0'; // Remove o '\n'
 
     novo->prox = NULL;
     novo->proxGenerico = NULL;
@@ -129,11 +135,17 @@ void pushGenerico(noGenerico **PRATELEIRA) {
     char fabricanteGenerico[30];
 
     printf("\nQual o nome do generico a ser inserido?: ");
-    scanf("%29s", nomeGenerico);
+    getchar(); // Limpa o buffer
+    fgets(nomeGenerico, 30, stdin);
+    nomeGenerico[strcspn(nomeGenerico, "\n")] = '\0'; // Remove o '\n'
+
     printf("Valor do generico: ");
     scanf("%f", &valorGenerico); // Mudança para float
+
     printf("Fabricante do generico: ");
-    scanf("%29s", fabricanteGenerico);
+    getchar(); // Limpa o buffer
+    fgets(fabricanteGenerico, 30, stdin);
+    fabricanteGenerico[strcspn(fabricanteGenerico, "\n")] = '\0'; // Remove o '\n'
 
     noGenerico *novo = (noGenerico *)malloc(sizeof(noGenerico));
     if (novo == NULL) {
