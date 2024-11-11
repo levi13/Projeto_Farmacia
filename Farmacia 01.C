@@ -3,20 +3,36 @@
 #include <string.h>
 
 typedef struct noGenerico {
-    char generico[30]; 
+    char generico[30];
+    float valor;
+    char fabricante[30];
     struct noGenerico *prox;
+    struct noGenerico *prev;
 } noGenerico;
 
 typedef struct noRemedio {
     char remedio[30];
+    float valor;
+    char fabricante[30];
     struct noRemedio *prox;
-    noGenerico *proxGenerico; 
+    noGenerico *proxGenerico;
 } noRemedio;
+
+// Funções auxiliares
+void limparBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
 
 int vazia(noRemedio *LISTA) {
     return LISTA == NULL || LISTA->prox == NULL;
 }
 
+void iniciaLista(noRemedio *LISTA) {
+    LISTA->prox = NULL;
+}
+
+// Funções de inserção
 void inserirRemedio(noRemedio *LISTA) {
     noRemedio *novo = (noRemedio *)malloc(sizeof(noRemedio));
     if (novo == NULL) {
@@ -25,9 +41,20 @@ void inserirRemedio(noRemedio *LISTA) {
     }
 
     printf("\nNome do Remedio: ");
-    scanf("%29s", novo->remedio); // Limite para evitar overflow
+    limparBuffer();
+    fgets(novo->remedio, 30, stdin);
+    novo->remedio[strcspn(novo->remedio, "\n")] = '\0';
+
+    printf("Valor do Remedio: ");
+    scanf("%f", &novo->valor);
+
+    printf("Fabricante do Remedio: ");
+    limparBuffer();
+    fgets(novo->fabricante, 30, stdin);
+    novo->fabricante[strcspn(novo->fabricante, "\n")] = '\0';
+
     novo->prox = NULL;
-    novo->proxGenerico = NULL; // Inicializando o PRATELEIRA como NULL
+    novo->proxGenerico = NULL;
 
     if (vazia(LISTA)) {
         LISTA->prox = novo;
@@ -40,14 +67,131 @@ void inserirRemedio(noRemedio *LISTA) {
     }
 }
 
+void pushGenerico(noGenerico **PRATELEIRA) {
+    char nomeGenerico[30];
+    float valorGenerico;
+    char fabricanteGenerico[30];
+
+    printf("\nQual o nome do generico a ser inserido?: ");
+    limparBuffer();
+    fgets(nomeGenerico, 30, stdin);
+    nomeGenerico[strcspn(nomeGenerico, "\n")] = '\0';
+
+    printf("Valor do generico: ");
+    scanf("%f", &valorGenerico);
+
+    printf("Fabricante do generico: ");
+    limparBuffer();
+    fgets(fabricanteGenerico, 30, stdin);
+    fabricanteGenerico[strcspn(fabricanteGenerico, "\n")] = '\0';
+
+    noGenerico *novo = (noGenerico *)malloc(sizeof(noGenerico));
+    if (novo == NULL) {
+        printf("Erro de alocacao de memoria!\n");
+        exit(1);
+    }
+
+    strcpy(novo->generico, nomeGenerico);
+    novo->valor = valorGenerico;
+    strcpy(novo->fabricante, fabricanteGenerico);
+    novo->prox = *PRATELEIRA;
+    novo->prev = NULL;
+
+    if (*PRATELEIRA != NULL) {
+        (*PRATELEIRA)->prev = novo;
+    }
+    *PRATELEIRA = novo;
+
+    printf("\nGenerico adicionado: %s\n", novo->generico);
+}
+
+// Funções de impressão
 void imprimir(noRemedio *LISTA) {
     noRemedio *temp = LISTA->prox;
     int contador = 0;
     while (temp != NULL) {
-        printf("Posicao %d: %s\n----------\n", contador, temp->remedio);
+        printf("Posicao %d: %s\nValor: %.2f\nFabricante: %s\n----------\n", 
+                contador, temp->remedio, temp->valor, temp->fabricante);
         temp = temp->prox;
         contador++;
     }
+}
+
+void listarGenericos(noGenerico *PRATELEIRA) {
+    if (PRATELEIRA == NULL) {
+        printf("Nenhum generico cadastrado.\n");
+        return;
+    }
+
+    noGenerico *temp = PRATELEIRA;
+    int contador = 0;
+    printf("Lista de Genericos:\n");
+    while (temp != NULL) {
+        printf("Posicao %d: %s\nValor: %.2f\nFabricante: %s\n", contador, temp->generico, temp->valor, temp->fabricante);
+        temp = temp->prox;
+        contador++;
+    }
+    printf("FIM_LISTA\n");
+}
+
+// Funções de remoção
+void liberarGenericos(noGenerico *PRATELEIRA) {
+    noGenerico *atual = PRATELEIRA;
+    while (atual != NULL) {
+        noGenerico *prox = atual->prox;
+        free(atual);
+        atual = prox;
+    }
+}
+
+void liberarLista(noRemedio *LISTA) {
+    noRemedio *atual = LISTA->prox;
+    while (atual != NULL) {
+        liberarGenericos(atual->proxGenerico);
+        noRemedio *prox = atual->prox;
+        free(atual);
+        atual = prox;
+    }
+    free(LISTA);
+}
+
+void removerGenerico(noGenerico **PRATELEIRA) {
+    if (*PRATELEIRA == NULL) {
+        printf("Prateleira vazia, nao ha genericos para remover.\n");
+        return;
+    }
+
+    listarGenericos(*PRATELEIRA);
+
+    int posicao = 0;
+    printf("Qual posicao do generico que voce quer remover?: ");
+    scanf("%d", &posicao);
+
+    noGenerico *atual = *PRATELEIRA;
+    int cont = 0;
+
+    while (cont < posicao && atual != NULL) {
+        atual = atual->prox;
+        cont++;
+    }
+
+    if (atual == NULL) {
+        printf("Posicao %d nao encontrada.\n", posicao);
+        return;
+    }
+
+    if (atual->prev != NULL) {
+        atual->prev->prox = atual->prox;
+    } else {
+        *PRATELEIRA = atual->prox;
+    }
+
+    if (atual->prox != NULL) {
+        atual->prox->prev = atual->prev;
+    }
+
+    free(atual);
+    printf("Generico removido da posicao %d.\n", posicao);
 }
 
 void removerRemedio(noRemedio *LISTA) {
@@ -55,6 +199,8 @@ void removerRemedio(noRemedio *LISTA) {
         printf("Lista vazia! Nao ha o que remover.\n");
         return;
     }
+
+    imprimir(LISTA);
 
     int posicao = 0;
     printf("Qual posicao do remedio que voce quer remover?: ");
@@ -75,171 +221,108 @@ void removerRemedio(noRemedio *LISTA) {
         return;
     }
 
+    liberarGenericos(suc->proxGenerico);
     ant->prox = suc->prox;
     free(suc);
-    printf("\n==========REMOVIDO_POSICAO: %d============\n", posicao);
+    printf("\nREMOVIDO_POSICAO: %d\n", posicao);
 }
-
-void iniciaLista(noRemedio *LISTA) {
-    LISTA->prox = NULL;
-}
-
-void liberarLista(noRemedio *LISTA) {
-    noRemedio *atual = LISTA->prox;
-    while (atual != NULL) {
-        noRemedio *prox = atual->prox;
-        free(atual);
-        atual = prox;
-    }
-    free(LISTA); // Libera a estrutura inicial
-}
-
-void pushGenerico(noGenerico **PRATELEIRA) {
-    char nomeGenerico[30]; // Altera para um array de char
-    printf("\nQual o nome do generico a ser inserido?: ");
-    scanf("%29s", nomeGenerico); // Limite para evitar overflow
-    noGenerico *novo = (noGenerico *)malloc(sizeof(noGenerico));
-    if (novo == NULL) {
-        printf("Erro de alocacao de memoria!\n");
-        exit(1);
-    }
-    strcpy(novo->generico, nomeGenerico); // Copia a string
-    novo->prox = *PRATELEIRA;
-    *PRATELEIRA = novo;
-
-    printf("\nGenerico adicionado: %s\n", novo->generico); // Use %s para imprimir a string
-}
-
-void imprimirGenerico(noGenerico *PRATELEIRA) {
-    noGenerico *temp = PRATELEIRA;
-    while (temp != NULL) {
-        printf("\n%s", temp->generico); // Mude para %s
-        temp = temp->prox;
-    }
-    printf("\n=============FIM_IMPRESSAO==============");
-}
-
-void removerGenerico(noGenerico **PRATELEIRA) {
-	
-	
-    if (*PRATELEIRA == NULL) {
-        printf("Prateleira vazia, nao ha genericos para remover.\n");
-        return;
-    }
-
-    int posicao = 0;
-    printf("Qual posicao do generico que voce quer remover?: ");
-    scanf("%d", &posicao);
-
-    noGenerico *ant = NULL;
-    noGenerico *atual = *PRATELEIRA;
-    int cont = 0;
-
-    while (cont < posicao && atual != NULL) {
-        ant = atual;
-        atual = atual->prox;
-        cont++;
-    }
-
-    if (atual == NULL) {
-        printf("Posicao %d nao encontrada.\n", posicao);
-        return;
-    }
-
-    if (ant == NULL) {
-        // Estamos removendo o primeiro elemento
-        *PRATELEIRA = atual->prox;
-    } else {
-        ant->prox = atual->prox; // Conecta o anterior ao próximo
-    }
-
-    free(atual);
-    printf("Generico removido com sucesso.\n");
-}
-
 
 void acessarPrateleira(noRemedio *LISTA) {
-    int posicaoPrateleira;
-    printf("\n\nQual PRATELEIRA deseja acessar?:\n---------------------------\n");
-    imprimir(LISTA);
-    printf("---------------------------\nPosicao?: ");
-    scanf("%d", &posicaoPrateleira);
-
-    noRemedio *AUX = LISTA->prox;
-    for (int contador = 0; contador < posicaoPrateleira && AUX != NULL; contador++) {
-        AUX = AUX->prox;
-    }
-
-    if (AUX == NULL) {
-        printf("Posicao nao encontrada.\n");
+    if (vazia(LISTA)) {
+        printf("Lista de remedios vazia.\n");
         return;
     }
 
-    noGenerico **PRATELEIRA = &AUX->proxGenerico; // Usa o Prateleira de genericos
+    noRemedio *AUX = LISTA->prox;
+    int opcao = 0;
 
-    printf("\n====ACESSANDO_COFRE: %s====", AUX->remedio);
-    int opcao;
     do {
-        printf("\n\n====MENU_DE_COFRE: %s====\n1. Adicionar generico \n2. Retirar generico \n3. Apresentar todos os genericos \n4. Remover generico \n0. Voltar.\nOpicao?: ", AUX->remedio);
+        printf("\nACESSANDO_PRATELEIRA\n");
+        printf("Escolha um remedio:\n");
+        int contador = 0;
+        while (AUX != NULL) {
+            printf("%d. %s\n", contador, AUX->remedio);
+            AUX = AUX->prox;
+            contador++;
+        }
+        printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
 
-        switch (opcao) {
-        case 1:
-            printf("\n==========INSERINDO_GENERICOS_PRATELEIRA: %s==========\n", AUX->remedio);
-            pushGenerico(PRATELEIRA);
-            break;
-        case 2:
-            printf("\n==========REMOVENDO_GENERICOS_PRATELEIRA: %s==========\n", AUX->remedio);
-            removerGenerico(PRATELEIRA); // Chamando a função para remover
-            break;
-        case 3:
-            printf("\n==========IMPRIMINDO_GENERICOS_PRATELEIRA: %s==========\n", AUX->remedio);
-            imprimirGenerico(*PRATELEIRA);
-            break;
-        case 4:
-            printf("\n==========REMOVENDO_GENERICOS_PRATELEIRA: %s==========\n", AUX->remedio);
-            removerGenerico(PRATELEIRA); // Chamando a função para remover um genérico
-            break;
+        if (opcao < 0 || contador <= opcao) {
+            printf("Opcao invalida.\n");
+            continue;
+        }
+
+        AUX = LISTA->prox;
+        contador = 0;
+
+        while (AUX != NULL && contador != opcao) {
+            AUX = AUX->prox;
+            contador++;
+        }
+
+        if (AUX != NULL) {
+            noGenerico *PRATELEIRA = AUX->proxGenerico;
+            do {
+                printf("\nACESSANDO_GENERICOS: %s\n", AUX->remedio);
+                printf("1. Inserir generico\n");
+                printf("2. Remover generico\n");
+                printf("3. Listar genericos\n");
+                printf("0. Voltar\n");
+                printf("Escolha uma opcao: ");
+                scanf("%d", &opcao);
+
+                switch (opcao) {
+                    case 1:
+                        pushGenerico(&PRATELEIRA);
+                        break;
+                    case 2:
+                        removerGenerico(&PRATELEIRA);
+                        break;
+                    case 3:
+                        listarGenericos(PRATELEIRA);
+                        break;
+                }
+            } while (opcao != 0);
+
+            AUX->proxGenerico = PRATELEIRA;
         }
     } while (opcao != 0);
 }
 
-
-
-
-
-
+// Função principal
 int main() {
     noRemedio *LISTA = (noRemedio *)malloc(sizeof(noRemedio));
-    if (LISTA == NULL) {
-        printf("Erro de alocacao de memoria!\n");
-        exit(1);
-    }
     iniciaLista(LISTA);
 
     int opcao;
     do {
-        printf("\n\n===MENU_DE_OPCOES===\n1. Adicionar remedio \n2. Retirar remedio \n3. Apresentar todos os remedios \n4. Acessar prateleira de remedios...: \n0. Sair.\nOpcao: ");
+        printf("\nMENU\n");
+        printf("1. Inserir remedio\n");
+        printf("2. Remover remedio\n");
+        printf("3. Listar remedios\n");
+        printf("4. Acessar prateleira de genericos\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
+
         switch (opcao) {
-        case 1:
-            inserirRemedio(LISTA);
-            break;
-        case 2:
-            removerRemedio(LISTA);
-            break;
-        case 3:
-            printf("\n==========IMPRIMINDO_LISTA==========\n");
-            imprimir(LISTA);
-            break;
-        case 4:
-            acessarPrateleira(LISTA);
-            break;
+            case 1:
+                inserirRemedio(LISTA);
+                break;
+            case 2:
+                removerRemedio(LISTA);
+                break;
+            case 3:
+                imprimir(LISTA);
+                break;
+            case 4:
+                acessarPrateleira(LISTA);
+                break;
         }
     } while (opcao != 0);
 
     liberarLista(LISTA);
-    LISTA = NULL; 
-    printf("Fim do programa, obrigado.");
+
     return 0;
 }
